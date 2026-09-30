@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>運動会 音源</title>
+<style>
+  :root { --bg:#f6f3ec; --card:#fff; --ink:#2b2a28; --sub:#7a756c; --accent:#e0703a; --line:#e6e0d4; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif; padding:24px 16px 48px; }
+  main { max-width:720px; margin:0 auto; }
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  .lead { color:var(--sub); margin:0 0 20px; font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
+  .card + .card { margin-top:16px; }
+  button, a.btn { font:inherit; font-size:.95rem; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:#fff; cursor:pointer; color:inherit; text-decoration:none; display:inline-block; }
+  button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  button.now { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+  audio { width:100%; margin-top:4px; }
+  .meta { font-weight:bold; margin:0 0 8px; }
+  .tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+  .tools .label { color:var(--sub); font-size:.85rem; margin-right:2px; flex-basis:100%; }
+  .marks button { flex:1 1 100%; text-align:left; display:flex; justify-content:space-between; gap:12px; }
+  .marks small { opacity:.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🎶 運動会 音源</h1>
+  <p class="lead">練習用の音源です。曲名をおすと、その曲から再生できます。</p>
+  <div id="audioList"></div>
+</main>
+
+<script>
+const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+
+function renderAudios(audios) {
+  const wrap = document.getElementById('audioList');
+  audios.forEach(a => {
+    const box = document.createElement('div');
+    box.className = 'card';
+    box.innerHTML = `<p class="meta">${a.title}</p>`;
+    const au = document.createElement('audio');
+    au.controls = true; au.preload = 'metadata'; au.src = a.src;
+    box.appendChild(au);
+
+    const marks = a.marks || [];
+    const markBtns = [];
+    if (marks.length) {
+      const jump = document.createElement('div');
+      jump.className = 'tools marks';
+      jump.innerHTML = '<span class="label">ここから</span>';
+      marks.forEach(mk => {
+        const b = document.createElement('button');
+        b.innerHTML = `<span>${mk.label}</span><small>${fmt(mk.t)}</small>`;
+        b.onclick = () => { au.currentTime = mk.t; au.play(); };
+        jump.appendChild(b);
+        markBtns.push(b);
+      });
+      box.appendChild(jump);
+      // いま流れている曲に印をつける
+      au.ontimeupdate = () => {
+        let now = -1;
+        marks.forEach((mk, i) => { if (au.currentTime >= mk.t) now = i; });
+        markBtns.forEach((b, i) => b.classList.toggle('now', i === now));
+      };
+    }
+
+    const tools = document.createElement('div');
+    tools.className = 'tools';
+    tools.innerHTML = '<span class="label">速さ</span>';
+    [0.5, 0.75, 1].forEach(r => {
+      const b = document.createElement('button');
+      b.textContent = r === 1 ? 'ふつう' : r + '倍';
+      if (r === 1) b.classList.add('on');
+      b.onclick = () => {
+        au.playbackRate = r;
+        tools.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      };
+      tools.appendChild(b);
+    });
+    const dl = document.createElement('a');
+    dl.className = 'btn'; dl.href = a.src; dl.download = ''; dl.textContent = '⬇ ダウンロード';
+    tools.appendChild(dl);
+    box.appendChild(tools);
+    wrap.appendChild(box);
+  });
+}
+
+(async () => {
+  const meta = await (await fetch('audios.json', { cache:'no-cache' })).json();
+  renderAudios(meta.audios);
+})();
+</script>
+</body>
+</html>
